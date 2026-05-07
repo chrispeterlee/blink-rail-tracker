@@ -444,6 +444,60 @@
     }
     .preset-btn:hover { border-color: var(--teal); color: var(--teal-bright); }
 
+    /* STOPOVER LIST */
+    .stopover-row {
+      display: grid;
+      grid-template-columns: 52px 1fr 70px 70px;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+      position: relative;
+    }
+    .stopover-row:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 20px;
+      top: 32px;
+      bottom: -8px;
+      width: 2px;
+      background: rgba(255,255,255,0.07);
+    }
+    .stopover-row.is-user::after { background: rgba(55,225,227,0.3); }
+    .stopover-row.past::after { background: var(--teal); }
+    .stop-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.2);
+      background: var(--surface2);
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
+    }
+    .stop-dot.past { background: var(--teal); border-color: var(--teal); }
+    .stop-dot.current {
+      background: var(--teal-bright);
+      border-color: var(--teal-bright);
+      box-shadow: 0 0 0 4px rgba(55,225,227,0.2);
+      width: 14px; height: 14px;
+    }
+    .stop-dot.user-stop {
+      border-color: var(--teal-bright);
+      background: rgba(55,225,227,0.15);
+      width: 14px; height: 14px;
+    }
+    .stop-name { font-size: 13px; color: var(--grey); }
+    .stop-name.highlight { color: var(--white); font-weight: 500; }
+    .stop-name.current-stop { color: var(--teal-bright); font-weight: 500; }
+    .stop-time { font-size: 12px; color: var(--grey-dim); text-align: right; }
+    .stop-time.delayed { color: var(--warning); }
+    .stop-delay-tag {
+      font-size: 11px;
+      color: var(--warning);
+      text-align: right;
+    }
+    .stop-cancelled { text-decoration: line-through; opacity: 0.5; }
+
     .success-flash {
       position: fixed;
       bottom: 2rem;
@@ -630,6 +684,7 @@
       <div class="step active"><div class="step-num">3</div><span>Track</span></div>
     </div>
 
+    <!-- TIMES CARD -->
     <div class="card">
       <div class="time-display">
         <div class="time-block">
@@ -663,6 +718,12 @@
           <div style="font-size:14px; font-weight:500;" id="track-delay">—</div>
         </div>
       </div>
+    </div>
+
+    <!-- ROUTE PROGRESS CARD -->
+    <div class="card" id="route-card" style="display:none;">
+      <div class="card-title" style="margin-bottom:1.25rem;">Route progress</div>
+      <div id="stopover-list"></div>
     </div>
 
     <!-- PAYOUT (shown when triggered) -->
@@ -827,9 +888,25 @@
     showFlash('Monitoring started');
   }
 
+  // Fuzzy station name match — strips "Hbf", "Hauptbahnhof", normalises umlauts
+  function stationMatch(apiName, userInput) {
+    const norm = s => s.toLowerCase()
+      .replace(/hauptbahnhof/g, 'hbf')
+      .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+      .replace(/[^a-z0-9]/g, '');
+    const a = norm(apiName), b = norm(userInput);
+    return a === b || a.includes(b) || b.includes(a);
+  }
+
+  // Match train number — handles "ICE 508" vs "ICE508" vs "508"
+  function trainMatch(apiName, userInput) {
+    const norm = s => s.replace(/\s+/g,'').toUpperCase();
+    const a = norm(apiName), b = norm(userInput);
+    return a === b || a.endsWith(b) || b.endsWith(a) || a.includes(b) || b.includes(a);
+  }
+
   async function refreshTracking() {
     document.getElementById('last-refresh').textContent = 'Updating...';
-
     document.getElementById('track-subtitle').textContent = `${state.depStation} → ${state.arrStation} · ${state.trainNum}`;
     document.getElementById('track-train-num').textContent = state.trainNum;
 
@@ -837,50 +914,62 @@
       let depData = null, arrDelay = 0, depDelay = 0, platform = '—';
       let actualDepTime = state.depTime;
       let actualArrTime = state.scheduledArr ? formatTime(state.scheduledArr) : '—';
+      let stopovers = [];
 
-      // Fetch live departure data
+      // Resolve departure EVA if we don't have it
+      if (!state.depEva) {
+        const stops = await fetch(`https://v6.db.transport.rest/locations?query=${encodeURIComponent(state.depStation)}&results=5&stops=true`).then(r=>r.json());
+        const s = stops.find(x => x.type === 'stop');
+        if (s) state.depEva = s.id;
+      }
+
       if (state.depEva) {
+        // Search a wider window — train may have already departed
         const when = `${state.depDate}T${state.depTime}:00+02:00`;
-        const deps = await fetch(`https://v6.db.transport.rest/stops/${state.depEva}/departures?when=${encodeURIComponent(when)}&duration=90&results=50`).then(r => r.json());
+        const deps = await fetch(`https://v6.db.transport.rest/stops/${state.depEva}/departures?when=${encodeURIComponent(when)}&duration=180&results=100`).then(r => r.json());
         const departures = deps.departures || [];
-        const trainClean = state.trainNum.replace(/\s+/g, '').toUpperCase();
-        const match = departures.find(d => {
-          const lineName = (d.line?.name || '').replace(/\s+/g, '').toUpperCase();
-          return lineName === trainClean || lineName.includes(trainClean) || trainClean.includes(lineName);
-        });
+
+        const match = departures.find(d => trainMatch(d.line?.name || d.line?.fahrtNr || '', state.trainNum));
 
         if (match) {
           depData = match;
           platform = match.platform || match.plannedPlatform || '—';
           depDelay = delayMins(match.plannedWhen, match.when);
           actualDepTime = match.when ? formatTime(match.when) : state.depTime;
-
-          // Try trip-level arrival data
-          const tid = match.tripId || state.tripId;
-          if (tid) {
-            try {
-              const trip = await fetch(`https://v6.db.transport.rest/trips/${encodeURIComponent(tid)}?stopovers=true`).then(r => r.json());
-              const stopovers = trip.trip?.stopovers || trip.stopovers || [];
-              const arrClean = state.arrStation.toLowerCase();
-              const arrStop = stopovers.find(s => (s.stop?.name || '').toLowerCase().includes(arrClean));
-              if (arrStop) {
-                arrDelay = delayMins(arrStop.plannedArrival, arrStop.arrival);
-                actualArrTime = arrStop.arrival ? formatTime(arrStop.arrival) : (arrStop.plannedArrival ? formatTime(arrStop.plannedArrival) : '—');
-                const plannedArrTime = arrStop.plannedArrival ? formatTime(arrStop.plannedArrival) : '—';
-                document.getElementById('track-arr-planned').innerHTML = arrDelay > 2 ? `Scheduled <s>${plannedArrTime}</s>` : '';
-              }
-            } catch(e) { /* ignore */ }
-          }
+          if (match.tripId) state.tripId = match.tripId;
         }
+      }
+
+      // Trip-level stopovers — gives us all intermediate stops + arrival at destination
+      const tid = state.tripId;
+      if (tid) {
+        try {
+          const tripResp = await fetch(`https://v6.db.transport.rest/trips/${encodeURIComponent(tid)}?stopovers=true&language=en`).then(r => r.json());
+          stopovers = tripResp.trip?.stopovers || tripResp.stopovers || [];
+
+          // Find our arrival stop using fuzzy match
+          const arrStop = stopovers.find(s => stationMatch(s.stop?.name || '', state.arrStation));
+          if (arrStop) {
+            arrDelay = delayMins(arrStop.plannedArrival, arrStop.arrival);
+            const rawArr = arrStop.arrival || arrStop.plannedArrival;
+            actualArrTime = rawArr ? formatTime(rawArr) : '—';
+            const plannedArrTime = arrStop.plannedArrival ? formatTime(arrStop.plannedArrival) : '—';
+            if (!state.arrEva) state.arrEva = arrStop.stop?.id;
+            document.getElementById('track-arr-planned').innerHTML =
+              arrDelay > 2 ? `<s>Sched. ${plannedArrTime}</s>` : '';
+          }
+
+          // Render stopover list
+          renderStopovers(stopovers);
+        } catch(e) { /* trip fetch failed */ }
       }
 
       const totalDelay = arrDelay || depDelay;
       const isCancelled = depData?.cancelled;
 
-      // Update departure time display
       document.getElementById('track-dep-time').textContent = actualDepTime;
-      document.getElementById('track-dep-label').textContent = state.depStation.split(' ')[0].toUpperCase();
-      document.getElementById('track-arr-label').textContent = state.arrStation.split(' ')[0].toUpperCase();
+      document.getElementById('track-dep-label').textContent = state.depStation.replace(/ (Hbf|Hauptbahnhof)$/i,'').toUpperCase();
+      document.getElementById('track-arr-label').textContent = state.arrStation.replace(/ (Hbf|Hauptbahnhof)$/i,'').toUpperCase();
       document.getElementById('track-arr-time').textContent = actualArrTime;
       document.getElementById('track-platform').textContent = platform;
 
@@ -893,35 +982,121 @@
       } else if (totalDelay >= 60) {
         document.getElementById('track-delay').textContent = `+${totalDelay} min`;
         document.getElementById('track-delay').style.color = '#F09595';
-        document.getElementById('track-arr-time').classList.add('delayed');
+        document.getElementById('track-arr-time').className = 'time-big delayed';
         setStatus('major', `+${totalDelay} min`);
         setBanner('major', `Your train is now ${totalDelay} minutes late. Payout triggered.`);
         triggerPayout();
       } else if (totalDelay >= 15) {
         document.getElementById('track-delay').textContent = `+${totalDelay} min`;
         document.getElementById('track-delay').style.color = '#FAC775';
-        document.getElementById('track-arr-time').classList.add('delayed');
+        document.getElementById('track-arr-time').className = 'time-big delayed';
         setStatus('delayed', `+${totalDelay} min`);
         setBanner('minor', `Running ${totalDelay} minutes late. We're watching — payout triggers at 60 minutes.`);
       } else if (totalDelay > 0) {
         document.getElementById('track-delay').textContent = `+${totalDelay} min`;
         document.getElementById('track-delay').style.color = '#FAC775';
+        document.getElementById('track-arr-time').className = 'time-big';
         setStatus('delayed', `+${totalDelay} min`);
         setBanner('minor', `Minor delay of ${totalDelay} minutes. Monitoring continues.`);
       } else {
         document.getElementById('track-delay').textContent = 'On time';
         document.getElementById('track-delay').style.color = '#5DCAA5';
-        document.getElementById('track-arr-time').classList.remove('delayed');
-        document.getElementById('track-arr-time').classList.add('on-time');
+        document.getElementById('track-arr-time').className = 'time-big';
         setStatus('on-time', 'On time');
         setBanner('ok', 'Your train is running on time. We\'ll alert you if this changes.');
       }
 
     } catch(err) {
+      console.error(err);
       setBanner('minor', 'Unable to fetch live data. Will retry shortly.');
     }
 
     document.getElementById('last-refresh').textContent = `Last updated ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+
+  function renderStopovers(stopovers) {
+    if (!stopovers.length) return;
+    const card = document.getElementById('route-card');
+    const list = document.getElementById('stopover-list');
+    card.style.display = 'block';
+
+    const now = new Date();
+
+    // Find indices for: user's dep station, user's arr station, current position
+    let depIdx = -1, arrIdx = -1, currentIdx = -1;
+    stopovers.forEach((s, i) => {
+      if (stationMatch(s.stop?.name || '', state.depStation)) depIdx = i;
+      if (stationMatch(s.stop?.name || '', state.arrStation)) arrIdx = i;
+    });
+
+    // Current position = last stop that has departed (departure time in past)
+    stopovers.forEach((s, i) => {
+      const dep = s.departure || s.plannedDeparture;
+      if (dep && new Date(dep) < now) currentIdx = i;
+    });
+
+    // Only show stops between dep and arr (inclusive), plus a couple either side for context
+    const showFrom = Math.max(0, depIdx - 1);
+    const showTo = Math.min(stopovers.length - 1, arrIdx === -1 ? stopovers.length - 1 : arrIdx);
+    const visible = stopovers.slice(showFrom, showTo + 1);
+    const offsetIdx = showFrom;
+
+    list.innerHTML = visible.map((s, vi) => {
+      const i = vi + offsetIdx;
+      const name = s.stop?.name || '—';
+      const isDepStation = i === depIdx;
+      const isArrStation = i === arrIdx;
+      const isUserStop = isDepStation || isArrStation;
+      const isPast = i <= currentIdx;
+      const isCurrent = i === currentIdx + 1 && currentIdx >= depIdx;
+
+      const planned = isArrStation
+        ? (s.plannedArrival || s.plannedDeparture)
+        : (s.plannedDeparture || s.plannedArrival);
+      const actual = isArrStation
+        ? (s.arrival || s.departure)
+        : (s.departure || s.arrival);
+
+      const delay = delayMins(planned, actual);
+      const displayTime = actual || planned;
+      const timeStr = displayTime ? formatTime(displayTime) : '—';
+      const isCancelled = s.cancelled;
+
+      let dotClass = 'stop-dot';
+      if (isCurrent) dotClass += ' current';
+      else if (isUserStop) dotClass += ' user-stop';
+      else if (isPast) dotClass += ' past';
+
+      let nameClass = 'stop-name';
+      if (isUserStop) nameClass += ' highlight';
+      if (isCurrent) nameClass = 'stop-name current-stop';
+      if (isCancelled) nameClass += ' stop-cancelled';
+
+      let timeClass = 'stop-time';
+      if (delay >= 5) timeClass += ' delayed';
+
+      const delayTag = delay >= 5 ? `<div class="stop-delay-tag">+${delay}</div>` : '<div></div>';
+      const label = isDepStation ? ' <span style="font-size:10px;color:var(--teal);margin-left:4px;">DEP</span>'
+                  : isArrStation ? ' <span style="font-size:10px;color:var(--teal);margin-left:4px;">ARR</span>'
+                  : isCurrent ? ' <span style="font-size:10px;color:var(--teal-bright);margin-left:4px;">●</span>'
+                  : '';
+
+      let rowClass = 'stopover-row';
+      if (isUserStop) rowClass += ' is-user';
+      if (isPast) rowClass += ' past';
+
+      return `<div class="${rowClass}">
+        <div style="display:flex;justify-content:center;"><div class="${dotClass}"></div></div>
+        <div class="${nameClass}">${name}${label}</div>
+        <div class="${timeClass}">${timeStr}</div>
+        ${delayTag}
+      </div>`;
+    }).join('');
+
+    // Add header row
+    list.innerHTML = `<div style="display:grid;grid-template-columns:52px 1fr 70px 70px;gap:8px;margin-bottom:8px;font-size:11px;color:var(--grey-dim);text-transform:uppercase;letter-spacing:0.04em;">
+      <div></div><div>Station</div><div style="text-align:right">Time</div><div style="text-align:right">Delay</div>
+    </div>` + list.innerHTML;
   }
 
   function setStatus(type, text) {
