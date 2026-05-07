@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blink Rail — Journey Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;800&family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy: #0C1327;
+      --navy-mid: #0E2040;
+      --teal: #037779;
+      --teal-bright: #37E1E3;
+      --grey: #B9BECD;
+      --grey-dim: #6B7280;
+      --white: #ffffff;
+      --surface: #111d35;
+      --surface2: #162040;
+      --danger: #E24B4A;
+      --warning: #EF9F27;
+      --success: #1D9E75;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--navy);
+      color: var(--white);
+      font-family: 'Roboto', sans-serif;
+      min-height: 100vh;
+      font-size: 15px;
+    }
+
+    /* NAV */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .logo {
+      font-family: 'Nunito Sans', sans-serif;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -0.3px;
+      color: var(--white);
+    }
+    .logo span { color: var(--teal-bright); }
+    .nav-pill {
+      background: rgba(55,225,227,0.1);
+      color: var(--teal-bright);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(55,225,227,0.25);
+    }
+
+    /* MAIN LAYOUT */
+    main {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    h1 {
+      font-family: 'Nunito Sans', sans-serif;
+      font-weight: 800;
+      font-size: 28px;
+      line-height: 1.2;
+      margin-bottom: 0.4rem;
+    }
+    h1 span { color: var(--teal-bright); }
+    .subtitle {
+      color: var(--grey);
+      font-size: 14px;
+      margin-bottom: 2rem;
+    }
+
+    /* STEP INDICATOR */
+    .steps {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 2rem;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--grey-dim);
+      flex: 1;
+    }
+    .step.active { color: var(--teal-bright); }
+    .step.done { color: var(--teal); }
+    .step-num {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 1px solid currentColor;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step.done .step-num {
+      background: var(--teal);
+      border-color: var(--teal);
+      color: white;
+    }
+    .step.active .step-num {
+      background: rgba(55,225,227,0.15);
+      border-color: var(--teal-bright);
+    }
+    .step-line {
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.1);
+      margin: 0 8px;
+    }
+
+    /* CARD */
+    .card {
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-family: 'Nunito Sans', sans-serif;
+      font-weight: 800;
+      font-size: 15px;
+      color: var(--white);
+      margin-bottom: 1rem;
+    }
+
+    /* SCAN AREA */
+    .scan-area {
+      border: 2px dashed rgba(55,225,227,0.3);
+      border-radius: var(--radius);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 1.25rem;
+      background: rgba(55,225,227,0.03);
+    }
+    .scan-area:hover {
+      border-color: rgba(55,225,227,0.6);
+      background: rgba(55,225,227,0.06);
+    }
+    .scan-icon {
+      width: 48px; height: 48px;
+      margin: 0 auto 0.75rem;
+      opacity: 0.6;
+    }
+    .scan-area p { color: var(--grey); font-size: 13px; }
+    .scan-area strong { color: var(--teal-bright); display: block; font-size: 15px; margin-bottom: 4px; }
+
+    .divider {
+      display: flex; align-items: center; gap: 12px;
+      color: var(--grey-dim); font-size: 12px; margin-bottom: 1.25rem;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px;
+      background: rgba(255,255,255,0.08);
+    }
+
+    /* FORM */
+    .form-row { margin-bottom: 1rem; }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--grey);
+      margin-bottom: 6px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    input, select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      color: var(--white);
+      font-family: 'Roboto', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      appearance: none;
+    }
+    input:focus, select:focus {
+      border-color: var(--teal);
+    }
+    input::placeholder { color: var(--grey-dim); }
+    select option { background: var(--navy-mid); }
+
+    /* BUTTONS */
+    .btn-primary {
+      width: 100%;
+      background: linear-gradient(135deg, var(--teal), var(--teal-bright));
+      color: var(--navy);
+      font-family: 'Nunito Sans', sans-serif;
+      font-weight: 800;
+      font-size: 15px;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 13px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      letter-spacing: 0.01em;
+    }
+    .btn-primary:hover { opacity: 0.92; }
+    .btn-primary:active { transform: scale(0.99); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: var(--grey);
+      font-family: 'Roboto', sans-serif;
+      font-size: 13px;
+      border-radius: var(--radius-sm);
+      padding: 8px 16px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-secondary:hover { border-color: rgba(255,255,255,0.35); color: var(--white); }
+
+    /* CONFIRMED JOURNEY CARD */
+    .journey-confirm {
+      background: var(--surface2);
+      border: 1px solid rgba(55,225,227,0.2);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .journey-route {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1rem;
+    }
+    .station-name {
+      font-family: 'Nunito Sans', sans-serif;
+      font-weight: 800;
+      font-size: 18px;
+    }
+    .route-line {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--grey-dim);
+    }
+    .route-line::before, .route-line::after {
+      content: ''; flex: 1; height: 1px;
+      background: rgba(255,255,255,0.12);
+    }
+    .train-badge {
+      background: rgba(3,119,121,0.25);
+      border: 1px solid rgba(55,225,227,0.2);
+      color: var(--teal-bright);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .journey-meta {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .meta-item { }
+    .meta-label { font-size: 11px; color: var(--grey-dim); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .meta-val { font-size: 14px; font-weight: 500; color: var(--white); }
+
+    /* TRACKING VIEW */
+    .track-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .status-on-time { background: rgba(29,158,117,0.15); color: #5DCAA5; border: 1px solid rgba(29,158,117,0.3); }
+    .status-delayed { background: rgba(239,159,39,0.15); color: #FAC775; border: 1px solid rgba(239,159,39,0.3); }
+    .status-major { background: rgba(226,75,74,0.15); color: #F09595; border: 1px solid rgba(226,75,74,0.3); }
+    .status-cancelled { background: rgba(226,75,74,0.15); color: #F09595; border: 1px solid rgba(226,75,74,0.3); }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .time-display {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .time-block { }
+    .time-block.right { text-align: right; }
+    .time-station { font-size: 12px; color: var(--grey-dim); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .time-big {
+      font-family: 'Nunito Sans', sans-serif;
+      font-weight: 800;
+      font-size: 32px;
+      line-height: 1;
+    }
+    .time-big.delayed { color: var(--warning); }
+    .time-big.on-time { color: var(--white); }
+    .time-planned-small { font-size: 11px; color: var(--grey-dim); margin-top: 3px; }
+    .time-planned-small s { opacity: 0.6; }
+    .time-arrow {
+      color: var(--grey-dim);
+      font-size: 18px;
+    }
+
+    .delay-banner {
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-bottom: 1.25rem;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .delay-banner.minor { background: rgba(239,159,39,0.1); border: 1px solid rgba(239,159,39,0.25); color: #FAC775; }
+    .delay-banner.major { background: rgba(226,75,74,0.1); border: 1px solid rgba(226,75,74,0.25); color: #F09595; }
+    .delay-banner.ok { background: rgba(29,158,117,0.1); border: 1px solid rgba(29,158,117,0.25); color: #5DCAA5; }
+
+    .payout-card {
+      background: linear-gradient(135deg, rgba(3,119,121,0.2), rgba(55,225,227,0.08));
+      border: 1px solid rgba(55,225,227,0.3);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .payout-title {
+      font-family: 'Nunito Sans', sans-serif;
+      font-weight: 800;
+      font-size: 16px;
+      color: var(--teal-bright);
+      margin-bottom: 0.75rem;
+    }
+    .payout-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 1rem;
+    }
+    .payout-option {
+      border: 1px solid rgba(55,225,227,0.2);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: rgba(55,225,227,0.04);
+    }
+    .payout-option:hover { border-color: rgba(55,225,227,0.5); background: rgba(55,225,227,0.1); }
+    .payout-option.selected { border-color: var(--teal-bright); background: rgba(55,225,227,0.12); }
+    .payout-option-title { font-weight: 500; font-size: 14px; margin-bottom: 2px; }
+    .payout-option-sub { font-size: 12px; color: var(--grey); }
+
+    .refresh-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--grey-dim);
+      margin-top: 1rem;
+    }
+    .refresh-btn {
+      background: transparent;
+      border: none;
+      color: var(--teal);
+      font-size: 12px;
+      cursor: pointer;
+      font-family: 'Roboto', sans-serif;
+      padding: 0;
+    }
+    .refresh-btn:hover { color: var(--teal-bright); }
+
+    .hidden { display: none !important; }
+
+    /* LOADING SPINNER */
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid rgba(55,225,227,0.2);
+      border-top-color: var(--teal-bright);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--grey);
+      font-size: 13px;
+    }
+    .loading-state .spinner { margin-bottom: 12px; }
+
+    /* QUICK FILL PRESETS */
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 1.25rem;
+    }
+    .preset-btn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--grey);
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: 'Roboto', sans-serif;
+    }
+    .preset-btn:hover { border-color: var(--teal); color: var(--teal-bright); }
+
+    .success-flash {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--teal);
+      color: var(--navy);
+      font-family: 'Nunito Sans', sans-serif;
+      font-weight: 800;
+      font-size: 14px;
+      padding: 12px 24px;
+      border-radius: 20px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 100;
+    }
+    .success-flash.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">blink <span>parametric</span></div>
+  <div class="nav-pill">Rail Tracker · Prototype</div>
+</nav>
+
+<main>
+
+  <!-- STEP 1: REGISTER -->
+  <div id="view-register">
+    <h1>Register your <span>journey</span></h1>
+    <p class="subtitle">We'll monitor your train in real time and trigger a payout if it's significantly delayed.</p>
+
+    <div class="steps">
+      <div class="step active" id="step1">
+        <div class="step-num">1</div>
+        <span>Register</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" id="step2">
+        <div class="step-num">2</div>
+        <span>Confirm</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" id="step3">
+        <div class="step-num">3</div>
+        <span>Track</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Ticket capture</div>
+
+      <div class="scan-area" id="scan-area" onclick="showScanModal()">
+        <svg class="scan-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="4" width="14" height="14" rx="2" stroke="#37E1E3" stroke-width="2"/>
+          <rect x="30" y="4" width="14" height="14" rx="2" stroke="#37E1E3" stroke-width="2"/>
+          <rect x="4" y="30" width="14" height="14" rx="2" stroke="#37E1E3" stroke-width="2"/>
+          <rect x="8" y="8" width="6" height="6" fill="#37E1E3" opacity="0.5"/>
+          <rect x="34" y="8" width="6" height="6" fill="#37E1E3" opacity="0.5"/>
+          <rect x="8" y="34" width="6" height="6" fill="#37E1E3" opacity="0.5"/>
+          <path d="M30 30h4v4h-4zM38 30h4v4h-4zM30 38h4v4h-4zM38 38h4v4h-4z" fill="#37E1E3" opacity="0.4"/>
+        </svg>
+        <strong>Scan DB ticket barcode</strong>
+        <p>UIC 918.3 / Aztec code from paper or DB Navigator app</p>
+      </div>
+
+      <div class="divider">or enter manually</div>
+
+      <div style="margin-bottom: 0.75rem;">
+        <div class="card-title" style="margin-bottom: 0.5rem; font-size: 13px; color: var(--grey);">Quick fill</div>
+        <div class="presets">
+          <button class="preset-btn" onclick="fillPreset('ICE 1587','München Hbf','8000261','Berlin Hbf','8011160','10:55')">ICE 1587 · Munich → Berlin</button>
+          <button class="preset-btn" onclick="fillPreset('ICE 517','Frankfurt Hbf','8000105','Hamburg Hbf','8000152','09:02')">ICE 517 · Frankfurt → Hamburg</button>
+          <button class="preset-btn" onclick="fillPreset('ICE 209','Berlin Hbf','8011160','Köln Hbf','8000207','07:55')">ICE 209 · Berlin → Cologne</button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Train number</label>
+        <input type="text" id="train-num" placeholder="e.g. ICE 1587" />
+      </div>
+      <div class="form-row-2">
+        <div>
+          <label>Departure station</label>
+          <input type="text" id="dep-station" placeholder="e.g. München Hbf" />
+          <input type="hidden" id="dep-eva" />
+        </div>
+        <div>
+          <label>Arrival station</label>
+          <input type="text" id="arr-station" placeholder="e.g. Berlin Hbf" />
+          <input type="hidden" id="arr-eva" />
+        </div>
+      </div>
+      <div class="form-row-2">
+        <div>
+          <label>Departure date</label>
+          <input type="date" id="dep-date" />
+        </div>
+        <div>
+          <label>Scheduled departure</label>
+          <input type="time" id="dep-time" />
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="lookupJourney()">Look up journey →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: CONFIRM -->
+  <div id="view-confirm" class="hidden">
+    <h1>Confirm your <span>journey</span></h1>
+    <p class="subtitle">We found the following service. Please confirm before we start monitoring.</p>
+
+    <div class="steps">
+      <div class="step done" id="step1c"><div class="step-num">✓</div><span>Register</span></div>
+      <div class="step-line"></div>
+      <div class="step active" id="step2c"><div class="step-num">2</div><span>Confirm</span></div>
+      <div class="step-line"></div>
+      <div class="step" id="step3c"><div class="step-num">3</div><span>Track</span></div>
+    </div>
+
+    <div class="journey-confirm" id="confirm-card">
+      <div class="journey-route">
+        <div class="station-name" id="conf-dep-name">—</div>
+        <div class="route-line">
+          <div class="train-badge" id="conf-train">—</div>
+        </div>
+        <div class="station-name" id="conf-arr-name">—</div>
+      </div>
+      <div class="journey-meta">
+        <div class="meta-item">
+          <div class="meta-label">Date</div>
+          <div class="meta-val" id="conf-date">—</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Departs</div>
+          <div class="meta-val" id="conf-dep-time">—</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Arrives (sched.)</div>
+          <div class="meta-val" id="conf-arr-time">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Payout trigger</div>
+      <p style="font-size: 13px; color: var(--grey); margin-bottom: 1rem;">A payout is triggered if your train arrives at <strong id="conf-arr-name2" style="color:var(--white)">—</strong> more than <strong style="color:var(--teal-bright)">60 minutes late</strong>.</p>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn-primary" style="flex:1" onclick="startTracking()">Start monitoring →</button>
+        <button class="btn-secondary" onclick="goBack()">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOADING STATE -->
+  <div id="view-loading" class="hidden">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <div id="loading-msg">Fetching live train data...</div>
+    </div>
+  </div>
+
+  <!-- STEP 3: TRACKING -->
+  <div id="view-track" class="hidden">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 1.5rem;">
+      <div>
+        <h1 style="font-size:22px;">Live <span>tracking</span></h1>
+        <p class="subtitle" style="margin-bottom:0;" id="track-subtitle">—</p>
+      </div>
+      <div class="status-badge status-on-time" id="main-status-badge">
+        <div class="status-dot"></div>
+        <span id="main-status-text">On time</span>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step done"><div class="step-num">✓</div><span>Register</span></div>
+      <div class="step-line"></div>
+      <div class="step done"><div class="step-num">✓</div><span>Confirm</span></div>
+      <div class="step-line"></div>
+      <div class="step active"><div class="step-num">3</div><span>Track</span></div>
+    </div>
+
+    <div class="card">
+      <div class="time-display">
+        <div class="time-block">
+          <div class="time-station" id="track-dep-label">DEPARTURE</div>
+          <div class="time-big" id="track-dep-time">—</div>
+          <div class="time-planned-small" id="track-dep-planned"></div>
+        </div>
+        <div class="time-arrow">→</div>
+        <div class="time-block right">
+          <div class="time-station" id="track-arr-label">ARRIVAL</div>
+          <div class="time-big" id="track-arr-time">—</div>
+          <div class="time-planned-small" id="track-arr-planned"></div>
+        </div>
+      </div>
+
+      <div class="delay-banner ok" id="delay-banner">
+        Your train is running on time.
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+        <div style="background:var(--surface2); border-radius:var(--radius-sm); padding:10px 12px;">
+          <div style="font-size:11px; color:var(--grey-dim); margin-bottom:2px; text-transform:uppercase; letter-spacing:0.04em;">Train</div>
+          <div style="font-size:14px; font-weight:500;" id="track-train-num">—</div>
+        </div>
+        <div style="background:var(--surface2); border-radius:var(--radius-sm); padding:10px 12px;">
+          <div style="font-size:11px; color:var(--grey-dim); margin-bottom:2px; text-transform:uppercase; letter-spacing:0.04em;">Platform</div>
+          <div style="font-size:14px; font-weight:500;" id="track-platform">—</div>
+        </div>
+        <div style="background:var(--surface2); border-radius:var(--radius-sm); padding:10px 12px;">
+          <div style="font-size:11px; color:var(--grey-dim); margin-bottom:2px; text-transform:uppercase; letter-spacing:0.04em;">Delay</div>
+          <div style="font-size:14px; font-weight:500;" id="track-delay">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAYOUT (shown when triggered) -->
+    <div class="payout-card hidden" id="payout-card">
+      <div class="payout-title">Payout triggered</div>
+      <p style="font-size:13px; color:var(--grey); margin-bottom:1rem;">Your train is significantly delayed. Choose your preferred resolution:</p>
+      <div class="payout-options">
+        <div class="payout-option" id="opt-lounge" onclick="selectPayout('lounge')">
+          <div class="payout-option-title">VIP Lounge Pass</div>
+          <div class="payout-option-sub">Access at your departure station</div>
+        </div>
+        <div class="payout-option" id="opt-cash" onclick="selectPayout('cash')">
+          <div class="payout-option-title">€50 instant payout</div>
+          <div class="payout-option-sub">Delivered to your preferred wallet</div>
+        </div>
+      </div>
+      <button class="btn-primary" id="claim-btn" onclick="claimPayout()" disabled>Select an option to claim</button>
+    </div>
+
+    <div class="refresh-bar">
+      <span id="last-refresh">Last updated —</span>
+      <button class="refresh-btn" onclick="refreshTracking()">↻ Refresh now</button>
+    </div>
+
+    <div style="margin-top:1.5rem; text-align:center;">
+      <button class="btn-secondary" onclick="resetAll()">← Register another journey</button>
+    </div>
+  </div>
+
+</main>
+
+<div class="success-flash" id="success-flash">Journey registered successfully</div>
+
+<script>
+  // ── STATE ──────────────────────────────────────────────────────────────────
+  const state = {
+    trainNum: '', depStation: '', depEva: '', arrStation: '', arrEva: '',
+    depDate: '', depTime: '', scheduledArr: '', tripId: null,
+    selectedPayout: null
+  };
+
+  // ── PRESET FILL ───────────────────────────────────────────────────────────
+  function fillPreset(train, depName, depEva, arrName, arrEva, time) {
+    document.getElementById('train-num').value = train;
+    document.getElementById('dep-station').value = depName;
+    document.getElementById('dep-eva').value = depEva;
+    document.getElementById('arr-station').value = arrName;
+    document.getElementById('arr-eva').value = arrEva;
+    document.getElementById('dep-time').value = time;
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('dep-date').value = today;
+  }
+
+  // Set today as default date
+  document.getElementById('dep-date').value = new Date().toISOString().split('T')[0];
+
+  // ── SCAN MODAL (mock) ──────────────────────────────────────────────────────
+  function showScanModal() {
+    alert('In a live product, this would open a camera view to scan the UIC 918.3 Aztec barcode from a DB ticket. For this prototype, use the manual form or quick-fill presets below.');
+  }
+
+  // ── LOOKUP ────────────────────────────────────────────────────────────────
+  async function lookupJourney() {
+    const trainNum = document.getElementById('train-num').value.trim();
+    const depStation = document.getElementById('dep-station').value.trim();
+    const depEva = document.getElementById('dep-eva').value.trim();
+    const arrStation = document.getElementById('arr-station').value.trim();
+    const depDate = document.getElementById('dep-date').value;
+    const depTime = document.getElementById('dep-time').value;
+
+    if (!trainNum || !depStation || !arrStation || !depDate || !depTime) {
+      alert('Please fill in all fields.');
+      return;
+    }
+
+    state.trainNum = trainNum;
+    state.depStation = depStation;
+    state.depEva = depEva || null;
+    state.arrStation = arrStation;
+    state.arrEva = document.getElementById('arr-eva').value.trim() || null;
+    state.depDate = depDate;
+    state.depTime = depTime;
+
+    showView('loading');
+    document.getElementById('loading-msg').textContent = 'Looking up service...';
+
+    try {
+      // Try to find the departure via DB API
+      let evaNo = state.depEva;
+      if (!evaNo) {
+        const stops = await fetch(`https://v6.db.transport.rest/locations?query=${encodeURIComponent(depStation)}&results=3&stops=true`).then(r => r.json());
+        const stop = stops.find(s => s.type === 'stop');
+        if (stop) { evaNo = stop.id; state.depEva = evaNo; }
+      }
+
+      let scheduledArr = null;
+      let tripId = null;
+
+      if (evaNo) {
+        const when = `${depDate}T${depTime}:00+02:00`;
+        const deps = await fetch(`https://v6.db.transport.rest/stops/${evaNo}/departures?when=${encodeURIComponent(when)}&duration=60&results=50`).then(r => r.json());
+        const departures = deps.departures || [];
+
+        // Match by train number (flexible)
+        const trainClean = trainNum.replace(/\s+/g, '').toUpperCase();
+        const match = departures.find(d => {
+          const lineName = (d.line?.name || '').replace(/\s+/g, '').toUpperCase();
+          return lineName === trainClean || lineName.includes(trainClean) || trainClean.includes(lineName);
+        });
+
+        if (match) {
+          tripId = match.tripId;
+          state.tripId = tripId;
+          // Try to get arrival time from trip
+          if (tripId) {
+            try {
+              const trip = await fetch(`https://v6.db.transport.rest/trips/${encodeURIComponent(tripId)}?stopovers=true`).then(r => r.json());
+              const stopovers = trip.trip?.stopovers || trip.stopovers || [];
+              const arrClean = arrStation.toLowerCase();
+              const arrStop = stopovers.find(s => (s.stop?.name || '').toLowerCase().includes(arrClean));
+              if (arrStop) {
+                scheduledArr = arrStop.plannedArrival || arrStop.arrival;
+                if (!state.arrEva) state.arrEva = arrStop.stop?.id;
+              }
+            } catch(e) { /* trip lookup failed, proceed without */ }
+          }
+        }
+      }
+
+      state.scheduledArr = scheduledArr;
+
+      // Populate confirm view
+      document.getElementById('conf-dep-name').textContent = state.depStation;
+      document.getElementById('conf-arr-name').textContent = state.arrStation;
+      document.getElementById('conf-arr-name2').textContent = state.arrStation;
+      document.getElementById('conf-train').textContent = state.trainNum;
+      document.getElementById('conf-date').textContent = formatDate(state.depDate);
+      document.getElementById('conf-dep-time').textContent = state.depTime;
+      document.getElementById('conf-arr-time').textContent = scheduledArr ? formatTime(scheduledArr) : 'See schedule';
+
+      showView('confirm');
+    } catch(err) {
+      // Fallback: still allow confirm with what we have
+      document.getElementById('conf-dep-name').textContent = state.depStation;
+      document.getElementById('conf-arr-name').textContent = state.arrStation;
+      document.getElementById('conf-arr-name2').textContent = state.arrStation;
+      document.getElementById('conf-train').textContent = state.trainNum;
+      document.getElementById('conf-date').textContent = formatDate(state.depDate);
+      document.getElementById('conf-dep-time').textContent = state.depTime;
+      document.getElementById('conf-arr-time').textContent = 'See schedule';
+      showView('confirm');
+    }
+  }
+
+  // ── TRACKING ──────────────────────────────────────────────────────────────
+  async function startTracking() {
+    showView('loading');
+    document.getElementById('loading-msg').textContent = 'Connecting to live data feed...';
+    await new Promise(r => setTimeout(r, 800));
+    await refreshTracking();
+    showView('track');
+    showFlash('Monitoring started');
+  }
+
+  async function refreshTracking() {
+    document.getElementById('last-refresh').textContent = 'Updating...';
+
+    document.getElementById('track-subtitle').textContent = `${state.depStation} → ${state.arrStation} · ${state.trainNum}`;
+    document.getElementById('track-train-num').textContent = state.trainNum;
+
+    try {
+      let depData = null, arrDelay = 0, depDelay = 0, platform = '—';
+      let actualDepTime = state.depTime;
+      let actualArrTime = state.scheduledArr ? formatTime(state.scheduledArr) : '—';
+
+      // Fetch live departure data
+      if (state.depEva) {
+        const when = `${state.depDate}T${state.depTime}:00+02:00`;
+        const deps = await fetch(`https://v6.db.transport.rest/stops/${state.depEva}/departures?when=${encodeURIComponent(when)}&duration=90&results=50`).then(r => r.json());
+        const departures = deps.departures || [];
+        const trainClean = state.trainNum.replace(/\s+/g, '').toUpperCase();
+        const match = departures.find(d => {
+          const lineName = (d.line?.name || '').replace(/\s+/g, '').toUpperCase();
+          return lineName === trainClean || lineName.includes(trainClean) || trainClean.includes(lineName);
+        });
+
+        if (match) {
+          depData = match;
+          platform = match.platform || match.plannedPlatform || '—';
+          depDelay = delayMins(match.plannedWhen, match.when);
+          actualDepTime = match.when ? formatTime(match.when) : state.depTime;
+
+          // Try trip-level arrival data
+          const tid = match.tripId || state.tripId;
+          if (tid) {
+            try {
+              const trip = await fetch(`https://v6.db.transport.rest/trips/${encodeURIComponent(tid)}?stopovers=true`).then(r => r.json());
+              const stopovers = trip.trip?.stopovers || trip.stopovers || [];
+              const arrClean = state.arrStation.toLowerCase();
+              const arrStop = stopovers.find(s => (s.stop?.name || '').toLowerCase().includes(arrClean));
+              if (arrStop) {
+                arrDelay = delayMins(arrStop.plannedArrival, arrStop.arrival);
+                actualArrTime = arrStop.arrival ? formatTime(arrStop.arrival) : (arrStop.plannedArrival ? formatTime(arrStop.plannedArrival) : '—');
+                const plannedArrTime = arrStop.plannedArrival ? formatTime(arrStop.plannedArrival) : '—';
+                document.getElementById('track-arr-planned').innerHTML = arrDelay > 2 ? `Scheduled <s>${plannedArrTime}</s>` : '';
+              }
+            } catch(e) { /* ignore */ }
+          }
+        }
+      }
+
+      const totalDelay = arrDelay || depDelay;
+      const isCancelled = depData?.cancelled;
+
+      // Update departure time display
+      document.getElementById('track-dep-time').textContent = actualDepTime;
+      document.getElementById('track-dep-label').textContent = state.depStation.split(' ')[0].toUpperCase();
+      document.getElementById('track-arr-label').textContent = state.arrStation.split(' ')[0].toUpperCase();
+      document.getElementById('track-arr-time').textContent = actualArrTime;
+      document.getElementById('track-platform').textContent = platform;
+
+      if (isCancelled) {
+        document.getElementById('track-delay').textContent = 'Cancelled';
+        document.getElementById('track-delay').style.color = '#F09595';
+        setStatus('cancelled', 'Cancelled');
+        setBanner('major', 'This service has been cancelled by DB.');
+        triggerPayout();
+      } else if (totalDelay >= 60) {
+        document.getElementById('track-delay').textContent = `+${totalDelay} min`;
+        document.getElementById('track-delay').style.color = '#F09595';
+        document.getElementById('track-arr-time').classList.add('delayed');
+        setStatus('major', `+${totalDelay} min`);
+        setBanner('major', `Your train is now ${totalDelay} minutes late. Payout triggered.`);
+        triggerPayout();
+      } else if (totalDelay >= 15) {
+        document.getElementById('track-delay').textContent = `+${totalDelay} min`;
+        document.getElementById('track-delay').style.color = '#FAC775';
+        document.getElementById('track-arr-time').classList.add('delayed');
+        setStatus('delayed', `+${totalDelay} min`);
+        setBanner('minor', `Running ${totalDelay} minutes late. We're watching — payout triggers at 60 minutes.`);
+      } else if (totalDelay > 0) {
+        document.getElementById('track-delay').textContent = `+${totalDelay} min`;
+        document.getElementById('track-delay').style.color = '#FAC775';
+        setStatus('delayed', `+${totalDelay} min`);
+        setBanner('minor', `Minor delay of ${totalDelay} minutes. Monitoring continues.`);
+      } else {
+        document.getElementById('track-delay').textContent = 'On time';
+        document.getElementById('track-delay').style.color = '#5DCAA5';
+        document.getElementById('track-arr-time').classList.remove('delayed');
+        document.getElementById('track-arr-time').classList.add('on-time');
+        setStatus('on-time', 'On time');
+        setBanner('ok', 'Your train is running on time. We\'ll alert you if this changes.');
+      }
+
+    } catch(err) {
+      setBanner('minor', 'Unable to fetch live data. Will retry shortly.');
+    }
+
+    document.getElementById('last-refresh').textContent = `Last updated ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+
+  function setStatus(type, text) {
+    const badge = document.getElementById('main-status-badge');
+    badge.className = 'status-badge';
+    if (type === 'on-time') badge.classList.add('status-on-time');
+    else if (type === 'delayed') badge.classList.add('status-delayed');
+    else badge.classList.add('status-major');
+    document.getElementById('main-status-text').textContent = text;
+  }
+
+  function setBanner(type, msg) {
+    const b = document.getElementById('delay-banner');
+    b.className = 'delay-banner ' + type;
+    b.textContent = msg;
+  }
+
+  function triggerPayout() {
+    document.getElementById('payout-card').classList.remove('hidden');
+  }
+
+  function selectPayout(option) {
+    state.selectedPayout = option;
+    document.getElementById('opt-lounge').classList.toggle('selected', option === 'lounge');
+    document.getElementById('opt-cash').classList.toggle('selected', option === 'cash');
+    const btn = document.getElementById('claim-btn');
+    btn.disabled = false;
+    btn.textContent = option === 'lounge' ? 'Claim lounge pass →' : 'Claim €50 payout →';
+  }
+
+  function claimPayout() {
+    const msg = state.selectedPayout === 'lounge'
+      ? 'Lounge pass issued. Check your email for access details.'
+      : '€50 payout initiated. Funds will arrive within minutes.';
+    showFlash(msg);
+    document.getElementById('claim-btn').textContent = '✓ Claimed';
+    document.getElementById('claim-btn').disabled = true;
+  }
+
+  // ── HELPERS ───────────────────────────────────────────────────────────────
+  function delayMins(planned, actual) {
+    if (!planned || !actual) return 0;
+    return Math.round((new Date(actual) - new Date(planned)) / 60000);
+  }
+
+  function formatTime(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '—';
+    return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function showView(name) {
+    ['register','confirm','loading','track'].forEach(v => {
+      document.getElementById(`view-${v}`).classList.toggle('hidden', v !== name);
+    });
+  }
+
+  function goBack() { showView('register'); }
+  function resetAll() {
+    state.tripId = null; state.selectedPayout = null;
+    document.getElementById('payout-card').classList.add('hidden');
+    showView('register');
+  }
+
+  function showFlash(msg) {
+    const f = document.getElementById('success-flash');
+    f.textContent = msg;
+    f.classList.add('show');
+    setTimeout(() => f.classList.remove('show'), 3000);
+  }
+
+  // Auto-refresh every 60s when on tracking view
+  setInterval(() => {
+    if (!document.getElementById('view-track').classList.contains('hidden')) {
+      refreshTracking();
+    }
+  }, 60000);
+</script>
+</body>
+</html>
